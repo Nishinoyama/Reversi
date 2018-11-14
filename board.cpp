@@ -13,7 +13,7 @@ board::board(){
     this->block[5][4] = 2;
     this->block[5][5] = 1;
 
-    this->block_char[0] = '.';        
+    this->block_char[0] = '.';
     this->block_char[1] = 'o';
     this->block_char[2] = 'x';
 
@@ -40,9 +40,7 @@ int board::set( int color, int x, int y){
 
     // 右
     for( int leng = 1; leng < 100; leng++ ){
-        printf("%d %d %d", x, y, hit);
         if( block[y][x+leng] && block[y][x+leng] != color ){
-            printf("hit!\n");
             hit = true;
         }else if( hit && block[y][x+leng] == color){
             settable = true;
