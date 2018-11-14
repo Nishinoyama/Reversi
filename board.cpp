@@ -29,10 +29,10 @@ board::board(){
 board::~board(){ }
 
 int board::set( int color, int x, int y){
-    int serachx = x;
-    int serachy = y;
     bool settable = false;
     bool hit = false;
+
+    if( block[x][y] ) return 0;
 
     if( x > 8 || x < 1 || y > 8 || y < 1 ){
         return 0;
@@ -40,14 +40,14 @@ int board::set( int color, int x, int y){
 
     // 右
     for( int leng = 1; leng < 100; leng++ ){
-        printf("%d %d %d", serachx, serachy, hit);
-        if( block[serachy][serachx+leng] && block[serachy][serachx+leng] != color ){
+        printf("%d %d %d", x, y, hit);
+        if( block[y][x+leng] && block[y][x+leng] != color ){
             printf("hit!\n");
             hit = true;
-        }else if( hit && block[serachy][serachx+leng] == color){
+        }else if( hit && block[y][x+leng] == color){
             settable = true;
             for( int through = leng; through >= 0; through--)
-                block[serachy][serachx+through] = color;
+                block[y][x+through] = color;
             break;
         }else{
             break;
@@ -57,12 +57,12 @@ int board::set( int color, int x, int y){
     // 右上
     hit = false;
     for( int leng = 1; leng < 100; leng++ ){
-        if( block[serachy+leng][serachx+leng] && block[serachy+leng][serachx+leng] != color ){
+        if( block[y+leng][x+leng] && block[y+leng][x+leng] != color ){
             hit = true;
-        }else if( hit && block[serachy+leng][serachx+leng] == color){
+        }else if( hit && block[y+leng][x+leng] == color){
             settable = true;
             for( int through = leng; through >= 0; through--)
-                block[serachy+through][serachx+through] = color;
+                block[y+through][x+through] = color;
             break;
         }else{
             break;
@@ -71,12 +71,12 @@ int board::set( int color, int x, int y){
     // 上
     hit = false;
     for( int leng = 1; leng < 100; leng++ ){
-        if( block[serachy+leng][serachx] && block[serachy+leng][serachx] != color ){
+        if( block[y+leng][x] && block[y+leng][x] != color ){
             hit = true;
-        }else if( hit && block[serachy+leng][serachx] == color){
+        }else if( hit && block[y+leng][x] == color){
             settable = true;
             for( int through = leng; through >= 0; through--)
-                block[serachy+through][serachx] = color;
+                block[y+through][x] = color;
             break;
         }else{
             break;
@@ -85,12 +85,12 @@ int board::set( int color, int x, int y){
     // 左上
     hit = false;
     for( int leng = 1; leng < 100; leng++ ){
-        if( block[serachy+leng][serachx-leng] && block[serachy+leng][serachx-leng] != color ){
+        if( block[y+leng][x-leng] && block[y+leng][x-leng] != color ){
             hit = true;
-        }else if( hit && block[serachy+leng][serachx-leng] == color){
+        }else if( hit && block[y+leng][x-leng] == color){
             settable = true;
             for( int through = leng; through >= 0; through--)
-                block[serachy+through][serachx-through] = color;
+                block[y+through][x-through] = color;
             break;
         }else{
             break;
@@ -99,12 +99,12 @@ int board::set( int color, int x, int y){
     // 左
     hit = false;
     for( int leng = 1; leng < 100; leng++ ){
-        if( block[serachy][serachx-leng] && block[serachy][serachx-leng] != color ){
+        if( block[y][x-leng] && block[y][x-leng] != color ){
             hit = true;
-        }else if( hit && block[serachy][serachx-leng] == color){
+        }else if( hit && block[y][x-leng] == color){
             settable = true;
             for( int through = leng; through >= 0; through--)
-                block[serachy][serachx-through] = color;
+                block[y][x-through] = color;
             break;
         }else{
             break;
@@ -113,12 +113,12 @@ int board::set( int color, int x, int y){
     // 左下
     hit = false;
     for( int leng = 1; leng < 100; leng++ ){
-        if( block[serachy-leng][serachx-leng] && block[serachy-leng][serachx-leng] != color ){
+        if( block[y-leng][x-leng] && block[y-leng][x-leng] != color ){
             hit = true;
-        }else if( hit && block[serachy-leng][serachx-leng] == color){
+        }else if( hit && block[y-leng][x-leng] == color){
             settable = true;
             for( int through = leng; through >= 0; through--)
-                block[serachy-through][serachx-through] = color;
+                block[y-through][x-through] = color;
             break;
         }else{
             break;
@@ -127,12 +127,12 @@ int board::set( int color, int x, int y){
     // 下
     hit = false;
     for( int leng = 1; leng < 100; leng++ ){
-        if( block[serachy-leng][serachx] && block[serachy-leng][serachx] != color ){
+        if( block[y-leng][x] && block[y-leng][x] != color ){
             hit = true;
-        }else if( hit && block[serachy-leng][serachx] == color){
+        }else if( hit && block[y-leng][x] == color){
             settable = true;
             for( int through = leng; through >= 0; through--)
-                block[serachy-through][serachx] = color;
+                block[y-through][x] = color;
             break;
         }else{
             break;
@@ -141,12 +141,12 @@ int board::set( int color, int x, int y){
     // 右下
     hit = false;
     for( int leng = 1; leng < 100; leng++ ){
-        if( block[serachy-leng][serachx+leng] && block[serachy-leng][serachx+leng] != color ){
+        if( block[y-leng][x+leng] && block[y-leng][x+leng] != color ){
             hit = true;
-        }else if( hit && block[serachy-leng][serachx+leng] == color){
+        }else if( hit && block[y-leng][x+leng] == color){
             settable = true;
             for( int through = leng; through >= 0; through--)
-                block[serachy-through][serachx+through] = color;
+                block[y-through][x+through] = color;
             break;
         }else{
             break;
