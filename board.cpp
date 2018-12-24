@@ -1,5 +1,6 @@
 //#include <bits/stdc++.h>
 #include <stdio.h>
+#include <utility>
 
 typedef long long unsigned int ll;
 
@@ -13,10 +14,11 @@ public :
         this->plpos = 0x0000000810000000;
         this->oppos = 0x0000001008000000;
         // ***********0x1121314151617181;
+        this->TurnNumber = 0;
+        this->TurnPlayer = 0;
 
         printf("complete!\n");
     }
-
     // E5 とか座標を受け取り、ビットデータで返す
     ll positionToBit( char y, char x ){
         // y 縦 12345678
@@ -30,11 +32,10 @@ public :
         mask >>= (x-0x31) << 3;
         return mask;
     }
-
     // 置ける範囲を返す
     ll SetableBoard(){
-        //番人を活用
-        //
+        // 番人を活用
+        // 置かないとKGB(ループ)が発生する
         // 横の番人
         ll horizenWatcher = this->oppos & 0x7e7e7e7e7e7e7e7e;
         // 縦の番人
@@ -59,7 +60,7 @@ public :
         // 自00001000
         // 当たったら残す
         // 仮00001000 <- tmp
-        // あとはtmoを左にずらし、当たったら...を繰り返す(6回)
+        // あとはtmpを左にずらし、当たったら...を繰り返す(6回)
         // 01111000 (最終形)
         // 最後に置く場所がblankなら設置可能となり、返り値に加える
         // (なんでこんなのおもいつくの)
@@ -134,21 +135,150 @@ public :
         return reversible;
 
     }
-
+    // 変位を求める putから1ずらしたのを返す
+    ll Displace( ll put , int flag ){
+        /*
+         * 210
+         * 3p7
+         * 456
+         */
+        switch ( flag ){
+            case 0:
+                return ( put >> 7 ) & 0x00fefefefefefefe;
+            case 1:
+                return ( put >> 8 ) & 0x00ffffffffffffff;
+            case 2:
+                return ( put >> 9 ) & 0x007f7f7f7f7f7f7f;
+            case 3:
+                return ( put >> 1 ) & 0x7f7f7f7f7f7f7f7f;
+            case 4:
+                return ( put << 7 ) & 0x7f7f7f7f7f7f7f00;
+            case 5:
+                return ( put << 8 ) & 0xffffffffffffff00;
+            case 6:
+                return ( put << 9 ) & 0xfefefefefefefe00;
+            case 7:
+                return ( put << 1 ) & 0xfefefefefefefefe;
+            default:
+                break;
+        }
+    }
+    // yxに駒を置く （オーバーロード）
+    void SetBoard( char y, char x ){
+        ll putpos = positionToBit(y,x);
+        SetBoard( putpos );
+    }
+    // llに駒を置く (本番)
+    void SetBoard( ll putpos ){
+        if( putpos & (this->oppos | this->plpos) ) return;
+        // ひっくり返せる位置
+        ll revers = 0;
+        // ひっくり返そうとする位置(1bit)
+        ll mask = 0;
+        // ８方向しっかり調べる
+        for( int fi = 0; fi < 8; fi++ ){
+            // 動的にひっくり返す位置を把握
+            ll prerevers = 0;
+            mask = Displace( putpos, fi);
+            // 敵の駒があるまで繰り返す
+            while( mask & this->oppos ){
+                // あったらずらして再調査
+                prerevers |= mask;
+                mask = Displace( mask , fi );
+            }
+            // 最後の位置が自分の駒ならひっくり返すに追加
+            if( mask & this->plpos ){
+                revers |= prerevers;
+            }
+        }
+        //ひっくり返すのがないなら何もなく返す
+        if( revers == 0 ){
+            return;
+        }
+        // いざひっくり返す
+        this->plpos ^= revers | putpos;
+        this->oppos ^= revers;
+        this->TurnNumber += 1;
+        TurnSwap();
+    }
+    // 番の切り替え
+    void TurnSwap(){
+        this->TurnPlayer ^= 1;
+        std::swap( this->plpos, this->oppos );
+    }
+    // 終了判定（パス込）
+    bool isEnd(){
+        if( this->SetableBoard() == 0 ){
+            this->TurnSwap();
+            if( this->SetableBoard() == 0 ){
+                if( TurnPlayer ) this->TurnSwap();
+                return true;
+            }
+        }
+        return false;
+    }
+    // plposの数
+    ll plNumber(){
+        // 分割統治法で解く
+        ll number = this->plpos;
+        number = ( number & 0x5555555555555555) + (( number & 0xAAAAAAAAAAAAAAAA ) >> 1);
+        number = ( number & 0x3333333333333333) + (( number & 0xCCCCCCCCCCCCCCCC ) >> 2);
+        number = ( number & 0x0F0F0F0F0F0F0F0F) + (( number & 0xF0F0F0F0F0F0F0F0 ) >> 4);
+        number = ( number & 0x00FF00FF00FF00FF) + (( number & 0xFF00FF00FF00FF00 ) >> 8);
+        number = ( number & 0x0000FFFF0000FFFF) + (( number & 0xFFFF0000FFFF0000 ) >> 16);
+        number = ( number & 0x00000000FFFFFFFF) + (( number & 0xFFFFFFFF00000000 ) >> 32);
+        return number;
+    }
+    // opposの数
+    ll opNumber(){
+        // 分割統治法で解く
+        ll number = this->oppos;
+        number = ( number & 0x5555555555555555) + (( number & 0xAAAAAAAAAAAAAAAA ) >> 1);
+        number = ( number & 0x3333333333333333) + (( number & 0xCCCCCCCCCCCCCCCC ) >> 2);
+        number = ( number & 0x0F0F0F0F0F0F0F0F) + (( number & 0xF0F0F0F0F0F0F0F0 ) >> 4);
+        number = ( number & 0x00FF00FF00FF00FF) + (( number & 0xFF00FF00FF00FF00 ) >> 8);
+        number = ( number & 0x0000FFFF0000FFFF) + (( number & 0xFFFF0000FFFF0000 ) >> 16);
+        number = ( number & 0x00000000FFFFFFFF) + (( number & 0xFFFFFFFF00000000 ) >> 32);
+        return number;
+    }
+    // 盤面の出力
     void printBoard(){
-        for( ll i = 1; i != 0; i<<=1 ){
+        printf ("X");
+        for( char c = 'A'; c <= 'H'; c++ ){
+            printf ("%c", c);
+        }
+        printf ("\n");
+        ll oPos = this->TurnPlayer & 1 ? this->oppos : this->plpos;
+        ll xPos = this->TurnPlayer & 1 ? this->plpos : this->oppos;
+        ll hPos = this->SetableBoard();
+        int yPosNumber = 0;
+        for( ll i = 0x8000000000000000; i != 0; i>>=1 ){
+            if( i & 0x8080808080808080 ) printf("%d" , ++yPosNumber);
             // 先手o　後手x　ブランク-
-            if( i & plpos ) printf ("o");
-            else if( i & oppos ) printf ("x");
+            if( i & oPos ) printf ("o");
+            else if( i & xPos ) printf ("x");
+            else if( i & hPos ) printf ("*");
             else printf ("-");
             // 程よく改行
-            if( i & 0x8080808080808080 ) printf("\n");
+            if( i & 0x0101010101010101 ) printf("\n");
+        }
+    }
+
+    // （仮）勝手においてくれる
+    void AutoSet(){
+        for( ll i = 0x8000000000000000; i != 0;i >>= 1){
+            if( this->SetableBoard() & i ){
+                SetBoard( i );
+                return;
+            }
         }
     }
 
 private :
-    ll plpos;
-    ll oppos;
+    ll plpos; // 打ち手
+    ll oppos; // 受け手
+    int TurnNumber; // ターン数
+    int TurnPlayer; // どっちターン 0:o 1:x 最初はoから
     //bit map(board) の使用
     //いろいろ高速かつ簡単にできる
     //右 >>1、左 <<1、下 >>8、上 <<8
@@ -156,7 +286,24 @@ private :
 
 int main(){
 
-    board Board;
-    Board.printBoard();
+    board B;
+    B.printBoard();
+    char PutCoordinate[3];
+    while(true ){
+        /*
+        scanf("%s", PutCoordinate );
+        B.SetBoard(PutCoordinate[0],PutCoordinate[1]);
+        if( B.isEnd() ) break;
+        B.printBoard();
+        */
+        
+        B.AutoSet();
+        if( B.isEnd() ) break;
+        B.printBoard();
+        
+    }
+    printf("Finish!!\n");
+    B.printBoard();
+    printf("%llu - %llu", B.plNumber() , B.opNumber() );
 
 }
