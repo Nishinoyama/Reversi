@@ -1,175 +1,162 @@
+//#include <bits/stdc++.h>
+#include <stdio.h>
 
-#include "board.h"
-#include <cstdio>
+typedef long long unsigned int ll;
 
-board::board(){
+class board{
 
-    printf("Welcome to Othello World!\n");
+public :
+    board(){
+        printf("Welcome to Othello World!\n");
+        printf("Initialize...");
 
-    printf("Initialize...");
+        this->plpos = 0x0000000810000000;
+        this->oppos = 0x0000001008000000;
+        // ***********0x1121314151617181;
 
-    this->block[4][4] = 1;
-    this->block[4][5] = 2;
-    this->block[5][4] = 2;
-    this->block[5][5] = 1;
-
-    this->block_char[0] = '.';
-    this->block_char[1] = 'o';
-    this->block_char[2] = 'x';
-
-    /*
-    this->block_char.insert(std::make_pair(0,'.'));
-    this->block_char.insert(std::make_pair(1,'o'));
-    this->block_char.insert(std::make_pair(2,'x'));
-    */
-
-    printf("complete!\n");
-}
-
-board::~board(){ }
-
-int board::set( int color, int x, int y){
-    bool settable = false;
-    bool hit = false;
-
-    if( block[x][y] ) return 0;
-
-    if( x > 8 || x < 1 || y > 8 || y < 1 ){
-        return 0;
+        printf("complete!\n");
     }
 
-    // 右
-    for( int leng = 1; leng < 100; leng++ ){
-        if( block[y][x+leng] && block[y][x+leng] != color ){
-            hit = true;
-        }else if( hit && block[y][x+leng] == color){
-            settable = true;
-            for( int through = leng; through >= 0; through--)
-                block[y][x+through] = color;
-            break;
-        }else{
-            break;
-        }
+    // E5 とか座標を受け取り、ビットデータで返す
+    ll positionToBit( char y, char x ){
+        // y 縦 12345678
+        // x 横 ABCDEFGH
+        // return Bit
+        // example : E5 -> 0x0000000008000000
+        ll mask = 0x8000000000000000;
+        // mask = A1
+        mask >>= (y-0x41);
+        // mask = N1
+        mask >>= (x-0x31) << 3;
+        return mask;
+    }
+
+    // 置ける範囲を返す
+    ll SetableBoard(){
+        //番人を活用
+        //
+        // 横の番人
+        ll horizenWatcher = this->oppos & 0x7e7e7e7e7e7e7e7e;
+        // 縦の番人
+        ll verticalWatcher = this->oppos & 0x00FFFFFFFFFFFF00;
+        // 斜の番人 (縦&横)
+        ll bothWatcher = this->oppos & 0x007e7e7e7e7e7e00;
+        //
+        // 空きのマス(1:空き)
+        ll blackBoard = ~( this->oppos | this->plpos );
+
+        // 一時データ
+        ll tmp;
+        // 返り値データ
+        ll reversible = 0;
+
+        // チェックだ！ {{{
+        // 例　左
+        // 敵01111010 (番人済)
+        // 自00000100
+        // 自を左にずらして
+        // 敵01111010
+        // 自00001000
+        // 当たったら残す
+        // 仮00001000 <- tmp
+        // あとはtmoを左にずらし、当たったら...を繰り返す(6回)
+        // 01111000 (最終形)
+        // 最後に置く場所がblankなら設置可能となり、返り値に加える
+        // (なんでこんなのおもいつくの)
+        // }}}
+        // すごい長いチェック {{{
+        // 左
+        tmp = horizenWatcher & (this->plpos << 1);
+        tmp |= horizenWatcher & (tmp << 1);
+        tmp |= horizenWatcher & (tmp << 1);
+        tmp |= horizenWatcher & (tmp << 1);
+        tmp |= horizenWatcher & (tmp << 1);
+        tmp |= horizenWatcher & (tmp << 1);
+        reversible |= blackBoard & (tmp << 1);
+        // 右
+        tmp = horizenWatcher & (this->plpos >> 1);
+        tmp |= horizenWatcher & (tmp >> 1);
+        tmp |= horizenWatcher & (tmp >> 1);
+        tmp |= horizenWatcher & (tmp >> 1);
+        tmp |= horizenWatcher & (tmp >> 1);
+        tmp |= horizenWatcher & (tmp >> 1);
+        reversible |= blackBoard & (tmp >> 1);
+        // 下
+        tmp = verticalWatcher & (this->plpos << 8);
+        tmp |= verticalWatcher & (tmp << 8);
+        tmp |= verticalWatcher & (tmp << 8);
+        tmp |= verticalWatcher & (tmp << 8);
+        tmp |= verticalWatcher & (tmp << 8);
+        tmp |= verticalWatcher & (tmp << 8);
+        reversible |= blackBoard & (tmp << 8);
+        // 上
+        tmp = verticalWatcher & (this->plpos >> 8);
+        tmp |= verticalWatcher & (tmp >> 8);
+        tmp |= verticalWatcher & (tmp >> 8);
+        tmp |= verticalWatcher & (tmp >> 8);
+        tmp |= verticalWatcher & (tmp >> 8);
+        tmp |= verticalWatcher & (tmp >> 8);
+        reversible |= blackBoard & (tmp >> 8);
+        // 左下
+        tmp = bothWatcher & (this->plpos << 9);
+        tmp |= bothWatcher & (tmp << 9);
+        tmp |= bothWatcher & (tmp << 9);
+        tmp |= bothWatcher & (tmp << 9);
+        tmp |= bothWatcher & (tmp << 9);
+        tmp |= bothWatcher & (tmp << 9);
+        reversible |= blackBoard & (tmp << 9);
+        // 左上
+        tmp = bothWatcher & (this->plpos >> 7);
+        tmp |= bothWatcher & (tmp >> 7);
+        tmp |= bothWatcher & (tmp >> 7);
+        tmp |= bothWatcher & (tmp >> 7);
+        tmp |= bothWatcher & (tmp >> 7);
+        tmp |= bothWatcher & (tmp >> 7);
+        reversible |= blackBoard & (tmp >> 7);
+        // 右下
+        tmp = bothWatcher & (this->plpos << 7);
+        tmp |= bothWatcher & (tmp << 7);
+        tmp |= bothWatcher & (tmp << 7);
+        tmp |= bothWatcher & (tmp << 7);
+        tmp |= bothWatcher & (tmp << 7);
+        tmp |= bothWatcher & (tmp << 7);
+        reversible |= blackBoard & (tmp << 7);
+        // 右上
+        tmp = bothWatcher & (this->plpos >> 9);
+        tmp |= bothWatcher & (tmp >> 9);
+        tmp |= bothWatcher & (tmp >> 9);
+        tmp |= bothWatcher & (tmp >> 9);
+        tmp |= bothWatcher & (tmp >> 9);
+        tmp |= bothWatcher & (tmp >> 9);
+        reversible |= blackBoard & (tmp >> 9);
+        // }}}
+
+        return reversible;
 
     }
-    // 右上
-    hit = false;
-    for( int leng = 1; leng < 100; leng++ ){
-        if( block[y+leng][x+leng] && block[y+leng][x+leng] != color ){
-            hit = true;
-        }else if( hit && block[y+leng][x+leng] == color){
-            settable = true;
-            for( int through = leng; through >= 0; through--)
-                block[y+through][x+through] = color;
-            break;
-        }else{
-            break;
-        }
-    }
-    // 上
-    hit = false;
-    for( int leng = 1; leng < 100; leng++ ){
-        if( block[y+leng][x] && block[y+leng][x] != color ){
-            hit = true;
-        }else if( hit && block[y+leng][x] == color){
-            settable = true;
-            for( int through = leng; through >= 0; through--)
-                block[y+through][x] = color;
-            break;
-        }else{
-            break;
-        }
-    }
-    // 左上
-    hit = false;
-    for( int leng = 1; leng < 100; leng++ ){
-        if( block[y+leng][x-leng] && block[y+leng][x-leng] != color ){
-            hit = true;
-        }else if( hit && block[y+leng][x-leng] == color){
-            settable = true;
-            for( int through = leng; through >= 0; through--)
-                block[y+through][x-through] = color;
-            break;
-        }else{
-            break;
-        }
-    }
-    // 左
-    hit = false;
-    for( int leng = 1; leng < 100; leng++ ){
-        if( block[y][x-leng] && block[y][x-leng] != color ){
-            hit = true;
-        }else if( hit && block[y][x-leng] == color){
-            settable = true;
-            for( int through = leng; through >= 0; through--)
-                block[y][x-through] = color;
-            break;
-        }else{
-            break;
-        }
-    }
-    // 左下
-    hit = false;
-    for( int leng = 1; leng < 100; leng++ ){
-        if( block[y-leng][x-leng] && block[y-leng][x-leng] != color ){
-            hit = true;
-        }else if( hit && block[y-leng][x-leng] == color){
-            settable = true;
-            for( int through = leng; through >= 0; through--)
-                block[y-through][x-through] = color;
-            break;
-        }else{
-            break;
-        }
-    }
-    // 下
-    hit = false;
-    for( int leng = 1; leng < 100; leng++ ){
-        if( block[y-leng][x] && block[y-leng][x] != color ){
-            hit = true;
-        }else if( hit && block[y-leng][x] == color){
-            settable = true;
-            for( int through = leng; through >= 0; through--)
-                block[y-through][x] = color;
-            break;
-        }else{
-            break;
-        }
-    }
-    // 右下
-    hit = false;
-    for( int leng = 1; leng < 100; leng++ ){
-        if( block[y-leng][x+leng] && block[y-leng][x+leng] != color ){
-            hit = true;
-        }else if( hit && block[y-leng][x+leng] == color){
-            settable = true;
-            for( int through = leng; through >= 0; through--)
-                block[y-through][x+through] = color;
-            break;
-        }else{
-            break;
+
+    void printBoard(){
+        for( ll i = 1; i != 0; i<<=1 ){
+            // 先手o　後手x　ブランク-
+            if( i & plpos ) printf ("o");
+            else if( i & oppos ) printf ("x");
+            else printf ("-");
+            // 程よく改行
+            if( i & 0x8080808080808080 ) printf("\n");
         }
     }
-    if( settable ) {
-        this->block[y][x] = color;
-        printf( "Set!\n" );
-    } else {
-        printf( "Unsettable\n" );
-    }
 
-    return (int)settable;
+private :
+    ll plpos;
+    ll oppos;
+    //bit map(board) の使用
+    //いろいろ高速かつ簡単にできる
+    //右 >>1、左 <<1、下 >>8、上 <<8
+};
 
-}
+int main(){
 
-void board::show(){
-    for(int y = 0; y < 9; y++){
-        for(int x = 0; x < 9; x++){
-            if( y == 0 ) printf("%c", '0'+x);
-            else if( x == 0 ) printf("%d", y);
-            else {
-                printf("%c", this->block_char[this->block[y][x]]);   
-            }
-        }
-        printf("\n");
-    }
+    board Board;
+    Board.printBoard();
+
 }
