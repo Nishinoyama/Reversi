@@ -1,8 +1,15 @@
 //#include <bits/stdc++.h>
 #include <stdio.h>
 #include <utility>
+#include <random>
+#include <ctime>
 
 typedef long long unsigned int ll;
+
+char SmallToCap( char A ){
+    if( A >= 'a' && A <= 'z' ) A-=0x20;
+    return A;
+}
 
 class board{
 
@@ -19,17 +26,20 @@ public :
 
         printf("complete!\n");
     }
-    // E5 とか座標を受け取り、ビットデータで返す
-    ll positionToBit( char y, char x ){
+    // E5 g3とか座標を受け取り、ビットデータで返す
+    ll positionToBit( char x, char y ){
         // y 縦 12345678
         // x 横 ABCDEFGH
+        x = SmallToCap(x);
+        //入力がちゃんとしているか見る
+        if( x<'A' || x>'H' || y<'1' || y>'8' ) return 0;
         // return Bit
         // example : E5 -> 0x0000000008000000
         ll mask = 0x8000000000000000;
         // mask = A1
-        mask >>= (y-0x41);
+        mask >>= (x-0x41);
         // mask = N1
-        mask >>= (x-0x31) << 3;
+        mask >>= (y-0x31) << 3;
         return mask;
     }
     // 置ける範囲を返す
@@ -264,12 +274,16 @@ public :
         }
     }
 
-    // （仮）勝手においてくれる
-    void AutoSet(){
-        for( ll i = 0x8000000000000000; i != 0;i >>= 1){
-            if( this->SetableBoard() & i ){
-                SetBoard( i );
-                return;
+    // （仮）ランダムにおく座標を返す
+    ll AutoSetPosition(){
+        std::mt19937 mt(time(0));
+        while(1){
+            for( ll i = 0x8000000000000000; i != 0;i >>= 1){
+                if( this->SetableBoard() & i ){
+                    if( mt() % 100 == 0 ){
+                        return i;
+                    }
+                }
             }
         }
     }
@@ -289,21 +303,17 @@ int main(){
     board B;
     B.printBoard();
     char PutCoordinate[3];
-    while(true ){
-        /*
+    ll PutPostion;
+    while(true){
         scanf("%s", PutCoordinate );
-        B.SetBoard(PutCoordinate[0],PutCoordinate[1]);
-        if( B.isEnd() ) break;
-        B.printBoard();
-        */
-        
-        B.AutoSet();
-        if( B.isEnd() ) break;
-        B.printBoard();
-        
+        PutPostion = B.positionToBit(PutCoordinate[0],PutCoordinate[1]);
+        if( PutPostion & B.SetableBoard() ){
+            B.SetBoard(PutPostion);
+            B.printBoard();
+        }
     }
     printf("Finish!!\n");
     B.printBoard();
-    printf("%llu - %llu", B.plNumber() , B.opNumber() );
+    printf("%llu - %llu\n", B.plNumber() , B.opNumber() );
 
 }
