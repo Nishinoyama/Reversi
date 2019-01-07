@@ -218,6 +218,11 @@ public :
         this->TurnPlayer ^= 1;
         std::swap( this->plpos, this->oppos );
     }
+
+    int isO_sTurn(){
+        return this->TurnPlayer^1;
+    }
+
     // パス判定
     bool isPass(){
         if( this->SetableBoard() == 0 ){
@@ -267,8 +272,8 @@ public :
             printf ("%c", c);
         }
         printf ("\n");
-        ll oPos = this->TurnPlayer & 1 ? this->oppos : this->plpos;
-        ll xPos = this->TurnPlayer & 1 ? this->plpos : this->oppos;
+        ll oPos = this->TurnPlayer ? this->oppos : this->plpos;
+        ll xPos = this->TurnPlayer ? this->plpos : this->oppos;
         ll hPos = this->SetableBoard();
         int yPosNumber = 0;
         for( ll i = 0x8000000000000000; i != 0; i>>=1 ){
@@ -297,8 +302,8 @@ public :
         }
     }
     // （仮）AI搭載（クソザコ）
-    ll AutoSetPosition_AI1(){
-        ll retPos = 0;
+    ll AutoSetPosition_AI1( int depth = 2 , int pullScore = 0 ){
+        ll bestPos = 0;
         ll revTmp;
         int ptsTmp;
         int max_point = -999999999;
@@ -306,14 +311,14 @@ public :
             if( this->SetableBoard() & i ){
                 revTmp = this->SetBoard( i );
                 ptsTmp = this->PositionPointPrime();
-                if( max_point < ptsTmp ){
-                    max_point = ptsTmp;
-                    retPos = i;
+                if( max_point < ptsTmp + pullScore ){
+                    max_point = ptsTmp + pullScore;
+                    bestPos = i;
                 }
                 this->UndoBoard( revTmp, i );
             }
         }
-        return retPos;
+        return bestPos;
     }
 
     // 得点を返す（評価関数）（クソザコ）
@@ -356,52 +361,35 @@ int main(){
     
     char PutCoordinate[3];
     ll PutPostion;
-    int Owin = 0, Xwin = 0;
-    for(int i = 0; i < 100000; i++){
+    for(int i = 0; i < 10; i++){
         board B;
-        //B.printBoard();
+        B.printBoard();
         while(true){
-            if( B.isPass() ){
-                B.TurnSwap();
-            }else{
-                if( B.isEnd() ){
-                    break;
-                }
-                //scanf("%s", PutCoordinate );
-                //PutPostion = B.positionToBit(PutCoordinate[0],PutCoordinate[1]);
-                //PutPostion = B.AutoSetPosition_AI1();
-                PutPostion = B.AutoSetPosition();
-                if( PutPostion & B.SetableBoard() ){
-                    B.SetBoard(PutPostion);
-                    //B.printBoard();
-                    B.TurnSwap();
-                }
+            if( B.isEnd() ){
+                break;
             }
             if( B.isPass() ){
                 B.TurnSwap();
-            }else{
-                if( B.isEnd() ){
-                    break;
-                }
-                //scanf("%s", PutCoordinate );
-                //PutPostion = B.positionToBit(PutCoordinate[0],PutCoordinate[1]);
+                printf("PASS!!\n");
+                B.printBoard();
+            }
+            if( B.isO_sTurn() ){
                 PutPostion = B.AutoSetPosition_AI1();
-                if( PutPostion & B.SetableBoard() ){
-                    B.SetBoard(PutPostion);
-                    //B.printBoard();
-                    B.TurnSwap();
-                }
+            }else{
+                // scanf("%s", PutCoordinate );
+                // PutPostion = B.positionToBit(PutCoordinate[0],PutCoordinate[1]);
+                PutPostion = B.AutoSetPosition();
+            }
+            if( PutPostion & B.SetableBoard() ){
+                B.SetBoard(PutPostion);
+                B.TurnSwap();
+                B.printBoard();
             }
         }
-        //printf("Finish!!\n");
-        //B.printBoard();
-        //printf("%llu - %llu\n", B.plNumber() , B.opNumber() );
-        if( B.plNumber() > B.opNumber() ) Owin++;
-        if( B.plNumber() < B.opNumber() ) Xwin++;
-        if( i%1000 == 0 )
-            printf("Middle(%d)Result\nRandom %d-%d AI1\n", i , Owin, Xwin );
+        printf("Finish!!\n");
+        B.printBoard();
+        printf("%llu - %llu\n", B.plNumber() , B.opNumber() );
     }
 
-    printf("FinalResult\nRandom %d-%d AI1\n" , Owin, Xwin );
 
 }
