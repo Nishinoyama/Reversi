@@ -20,14 +20,21 @@ public :
     void SetBoard( ll putpos );
     // 終了判定（パス込）
     bool isEnd();
+    // plposの数
+    ll plNumber();
+    // opposの数
+    ll opNumber();
     // 盤面の出力
     void printBoard();
+
+    // （仮）ランダムにおく座標を返す
+    ll AutoSetPosition();
 
 private :
     ll plpos; // 打ち手
     ll oppos; // 受け手
     int TurnNumber; // ターン数
-    int TurnPlayer; // どっちターン 0:o 1:x 最初はoから
+    int TurnPlayer; // どっちターン 0:O 1:X 最初はOから
     //bit map(board) の使用
     //いろいろ高速かつ簡単にできる
     //右 >>1、左 <<1、下 >>8、上 <<8

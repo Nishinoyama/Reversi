@@ -15,8 +15,8 @@ class board{
 
 public :
     board(){
-        printf("Welcome to Othello World!\n");
-        printf("Initialize...");
+        //printf("Welcome to Othello World!\n");
+        //printf("Initialize...");
 
         this->plpos = 0x0000000810000000;
         this->oppos = 0x0000001008000000;
@@ -24,7 +24,7 @@ public :
         this->TurnNumber = 0;
         this->TurnPlayer = 0;
 
-        printf("complete!\n");
+        //printf("complete!\n");
     }
     // E5 g3とか座標を受け取り、ビットデータで返す
     ll positionToBit( char x, char y ){
@@ -173,14 +173,9 @@ public :
                 break;
         }
     }
-    // yxに駒を置く （オーバーロード）
-    void SetBoard( char y, char x ){
-        ll putpos = positionToBit(y,x);
-        SetBoard( putpos );
-    }
-    // llに駒を置く (本番)
-    void SetBoard( ll putpos ){
-        if( putpos & (this->oppos | this->plpos) ) return;
+    // llに駒を置く (本番)（返り値はひっくり返した場所）
+    ll SetBoard( ll putpos ){
+        if( putpos & (this->oppos | this->plpos) ) return 0;
         // ひっくり返せる位置
         ll revers = 0;
         // ひっくり返そうとする位置(1bit)
@@ -203,18 +198,37 @@ public :
         }
         //ひっくり返すのがないなら何もなく返す
         if( revers == 0 ){
-            return;
+            return 0;
         }
         // いざひっくり返す
         this->plpos ^= revers | putpos;
         this->oppos ^= revers;
         this->TurnNumber += 1;
-        TurnSwap();
+        //TurnSwap();
+        return revers;
+    }
+    // 置いたのを無しにする（ひっくり返された位置、置いた位置）
+    void UndoBoard( ll reversRange , ll putPos ){
+        this->plpos ^= reversRange | putPos;
+        this->oppos ^= reversRange;
+        this->TurnNumber -= 1;
     }
     // 番の切り替え
     void TurnSwap(){
         this->TurnPlayer ^= 1;
         std::swap( this->plpos, this->oppos );
+    }
+    // パス判定
+    bool isPass(){
+        if( this->SetableBoard() == 0 ){
+            this->TurnSwap();
+            if( this->SetableBoard() == 0 ){
+                this->TurnSwap();
+                return false;
+            }
+            this->TurnSwap();
+            return true;
+        }
     }
     // 終了判定（パス込）
     bool isEnd(){
@@ -227,10 +241,9 @@ public :
         }
         return false;
     }
-    // plposの数
-    ll plNumber(){
+    // Bitの立っている数を返す
+    ll bitCounter( ll number ){
         // 分割統治法で解く
-        ll number = this->plpos;
         number = ( number & 0x5555555555555555) + (( number & 0xAAAAAAAAAAAAAAAA ) >> 1);
         number = ( number & 0x3333333333333333) + (( number & 0xCCCCCCCCCCCCCCCC ) >> 2);
         number = ( number & 0x0F0F0F0F0F0F0F0F) + (( number & 0xF0F0F0F0F0F0F0F0 ) >> 4);
@@ -239,17 +252,13 @@ public :
         number = ( number & 0x00000000FFFFFFFF) + (( number & 0xFFFFFFFF00000000 ) >> 32);
         return number;
     }
+    // plposの数
+    ll plNumber(){
+        return this->bitCounter( this->plpos );
+    }
     // opposの数
     ll opNumber(){
-        // 分割統治法で解く
-        ll number = this->oppos;
-        number = ( number & 0x5555555555555555) + (( number & 0xAAAAAAAAAAAAAAAA ) >> 1);
-        number = ( number & 0x3333333333333333) + (( number & 0xCCCCCCCCCCCCCCCC ) >> 2);
-        number = ( number & 0x0F0F0F0F0F0F0F0F) + (( number & 0xF0F0F0F0F0F0F0F0 ) >> 4);
-        number = ( number & 0x00FF00FF00FF00FF) + (( number & 0xFF00FF00FF00FF00 ) >> 8);
-        number = ( number & 0x0000FFFF0000FFFF) + (( number & 0xFFFF0000FFFF0000 ) >> 16);
-        number = ( number & 0x00000000FFFFFFFF) + (( number & 0xFFFFFFFF00000000 ) >> 32);
-        return number;
+        return this->bitCounter( this->oppos );
     }
     // 盤面の出力
     void printBoard(){
@@ -265,8 +274,8 @@ public :
         for( ll i = 0x8000000000000000; i != 0; i>>=1 ){
             if( i & 0x8080808080808080 ) printf("%d" , ++yPosNumber);
             // 先手o　後手x　ブランク-
-            if( i & oPos ) printf ("o");
-            else if( i & xPos ) printf ("x");
+            if( i & oPos ) printf ("O");
+            else if( i & xPos ) printf ("X");
             else if( i & hPos ) printf ("*");
             else printf ("-");
             // 程よく改行
@@ -276,7 +285,7 @@ public :
 
     // （仮）ランダムにおく座標を返す
     ll AutoSetPosition(){
-        std::mt19937 mt(time(0));
+        std::mt19937 mt((int)clock());
         while(1){
             for( ll i = 0x8000000000000000; i != 0;i >>= 1){
                 if( this->SetableBoard() & i ){
@@ -286,6 +295,50 @@ public :
                 }
             }
         }
+    }
+    // （仮）AI搭載（クソザコ）
+    ll AutoSetPosition_AI1(){
+        ll retPos = 0;
+        ll revTmp;
+        int ptsTmp;
+        int max_point = -999999999;
+        for( ll i = 0x8000000000000000; i != 0;i >>= 1){
+            if( this->SetableBoard() & i ){
+                revTmp = this->SetBoard( i );
+                ptsTmp = this->PositionPointPrime();
+                if( max_point < ptsTmp ){
+                    max_point = ptsTmp;
+                    retPos = i;
+                }
+                this->UndoBoard( revTmp, i );
+            }
+        }
+        return retPos;
+    }
+
+    // 得点を返す（評価関数）（クソザコ）
+    int PositionPointPrime(){
+        int retPoint = 0;
+        int plnum = bitCounter(this->plpos);
+        int opnum = bitCounter(this->oppos);
+        // 隅：50000点
+        retPoint += bitCounter(0x8100000000000081 & this->plpos ) * 50000;
+        retPoint += bitCounter(0x8100000000000081 & this->oppos ) * -50000;
+        // 斜：-10000点
+        retPoint += bitCounter(0x0042241818244200 & this->plpos ) * -10000;
+        retPoint += bitCounter(0x0042241818244200 & this->plpos ) * 10000;
+        // おける数： 1000点
+        retPoint += bitCounter( this->SetableBoard() ) * 1000;
+        this->TurnSwap();
+        retPoint += bitCounter( this->SetableBoard() ) * -1000;
+        this->TurnSwap();
+        // 石の差： -1000点（残りが少ないと加点）
+        if( 64-plnum-opnum > 6 ){
+            retPoint += (opnum-plnum) * 1000;
+        }else{
+            retPoint += (plnum-opnum) * 1000;
+        }
+        return retPoint;
     }
 
 private :
@@ -300,20 +353,55 @@ private :
 
 int main(){
 
-    board B;
-    B.printBoard();
+    
     char PutCoordinate[3];
     ll PutPostion;
-    while(true){
-        scanf("%s", PutCoordinate );
-        PutPostion = B.positionToBit(PutCoordinate[0],PutCoordinate[1]);
-        if( PutPostion & B.SetableBoard() ){
-            B.SetBoard(PutPostion);
-            B.printBoard();
+    int Owin = 0, Xwin = 0;
+    for(int i = 0; i < 100000; i++){
+        board B;
+        //B.printBoard();
+        while(true){
+            if( B.isPass() ){
+                B.TurnSwap();
+            }else{
+                if( B.isEnd() ){
+                    break;
+                }
+                //scanf("%s", PutCoordinate );
+                //PutPostion = B.positionToBit(PutCoordinate[0],PutCoordinate[1]);
+                //PutPostion = B.AutoSetPosition_AI1();
+                PutPostion = B.AutoSetPosition();
+                if( PutPostion & B.SetableBoard() ){
+                    B.SetBoard(PutPostion);
+                    //B.printBoard();
+                    B.TurnSwap();
+                }
+            }
+            if( B.isPass() ){
+                B.TurnSwap();
+            }else{
+                if( B.isEnd() ){
+                    break;
+                }
+                //scanf("%s", PutCoordinate );
+                //PutPostion = B.positionToBit(PutCoordinate[0],PutCoordinate[1]);
+                PutPostion = B.AutoSetPosition_AI1();
+                if( PutPostion & B.SetableBoard() ){
+                    B.SetBoard(PutPostion);
+                    //B.printBoard();
+                    B.TurnSwap();
+                }
+            }
         }
+        //printf("Finish!!\n");
+        //B.printBoard();
+        //printf("%llu - %llu\n", B.plNumber() , B.opNumber() );
+        if( B.plNumber() > B.opNumber() ) Owin++;
+        if( B.plNumber() < B.opNumber() ) Xwin++;
+        if( i%1000 == 0 )
+            printf("Middle(%d)Result\nRandom %d-%d AI1\n", i , Owin, Xwin );
     }
-    printf("Finish!!\n");
-    B.printBoard();
-    printf("%llu - %llu\n", B.plNumber() , B.opNumber() );
+
+    printf("FinalResult\nRandom %d-%d AI1\n" , Owin, Xwin );
 
 }

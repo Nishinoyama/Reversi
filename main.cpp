@@ -3,18 +3,25 @@
 #include "board.h"
 
 int main(){
-    
+
     board B;
-
-    int a,b;
-    int cnt = 0;
-    while(1){
-        B.show();
-        scanf("%d %d", &a, &b);
-        cnt += B.set(1+cnt%2,a,b);
+    B.printBoard();
+    char PutCoordinate[3];
+    ll PutPostion;
+    while(true){
+        //scanf("%s", PutCoordinate );
+        //PutPostion = B.positionToBit(PutCoordinate[0],PutCoordinate[1]);
+        PutPostion = B.AutoSetPosition();
+        if( PutPostion & B.SetableBoard() ){
+            B.SetBoard(PutPostion);
+            B.printBoard();
+        }
+        if( B.isEnd() ){
+            break;
+        }
     }
-    int aaaaa;
-    scanf( "%d", aaaaa );
+    printf("Finish!!\n");
+    B.printBoard();
+    printf("%llu - %llu\n", B.plNumber() , B.opNumber() );
 
-    return 0;
 }
